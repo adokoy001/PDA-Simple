@@ -358,15 +358,77 @@ PDA::Simple - Push Down Automaton Simple
 =head1 SYNOPSIS
 
     use PDA::Simple;
+    use Data::Dumper;  # for demonstration.
 
     # create PDA::Simple object.
     my $pda = PDA::Simple->new();
 
-    # set
+    # add states
+    $pda->add_state('A');
+    $pda->add_state('B');
+
+    # add transition from initial state with stack ops
+    $pda->add_trans_from_init('A','a','push');
+
+    # add transition FROM and TO with stack ops
+    $pda->add_trans('A','A','a','push');
+    $pda->add_trans('A','B','b','pop');
+    $pda->add_trans('B','B','b','pop');
+
+    # add transition to final state with stack ops
+    $pda->add_trans_to_final('__INIT__','b','pop');
+
+    # define input array.
+    my $array = ['a','a','a','a','b','b','b','b'];
+
+    # run
+
+    for( 0 .. $#$array ){
+        if(my $hash = $pda->transit($array->[$_],'')){
+            print "HIT!\n";
+            print Dumper $hash->{stack_a};
+        }
+    }
 
 =head1 DESCRIPTION
 
-PDA::Simple is ...
+PDA::Simple is simple module for generating Push Down Automaton(PDA).
+
+=head1 METHODS
+
+=head2 I<add_state>
+
+Add state.
+
+    $pda->add_state('A');
+
+=head2 I<add_trans>
+
+Add transition function.
+
+    $operation = 'push'; # "push" or "pop" or "no"
+    $pda->add_trans('FROM','TO','INPUT',$operation);
+
+=head2 I<add_trans_from_init>
+
+Add transition function specialized to INIT state.
+
+    $pda->add_trans_from_init('TO','INPUT','push');
+
+=head2 I<add_trans_to_final>
+
+Add transition function specialized to FINAL state.
+
+    $pda->add_trans_to_final('FROM','INPUT','pop');
+
+=head2 I<transit>
+
+Transition.
+
+This method returns inner state(stacks) if it reaches to acceptable state.
+
+    my $hash = $pda->transit('INPUT','ADDITIONAL_ATTRIBUTES');
+
 
 =head1 LICENSE
 
