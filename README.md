@@ -6,6 +6,11 @@ PDA::Simple - Push Down Automaton Simple
 
     use PDA::Simple;
 
+    # create PDA::Simple object.
+    my $pda = PDA::Simple->new();
+
+    # set
+
 # DESCRIPTION
 
 PDA::Simple is ...

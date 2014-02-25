@@ -43,6 +43,7 @@
       },
       "runtime" : {
          "requires" : {
+            "Mouse" : "v2.1.0",
             "perl" : "5.008005"
          }
       },
@@ -53,5 +54,8 @@
       }
    },
    "release_status" : "unstable",
-   "version" : "0.01"
+   "version" : "0.01",
+   "x_contributors" : [
+      "Toshiaki Yokoda <yokoda@ub12.04svr>"
+   ]
 }

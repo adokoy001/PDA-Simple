@@ -4,6 +4,12 @@ use Mouse;
 
 our $VERSION = "0.01";
 
+has 'stack_init' => (
+    is => 'rw',
+    isa => 'Str',
+    default => '__INIT__'
+    );
+
 has 'init_state' => (
     is => 'rw',
     isa => 'Str',
@@ -90,8 +96,15 @@ sub add_acceptables{
 sub add_trans{
     my $self = shift;
     my $from_state = shift;
-    my $input = shift;
     my $to_state = shift;
+    my $input = shift;
+    my $push_or_pop = shift;
+    unless(defined($push_or_pop)){
+	$push_or_pop = 'no';
+    }
+    if(($push_or_pop ne 'push') and ($push_or_pop ne 'pop') and ($push_or_pop ne 'no')){
+	$push_or_pop = 'no';
+    }
     my $model = $self->model;
     if($from_state eq $self->final_state){
 	warn "can't add this transition: from final state\n";
@@ -103,10 +116,13 @@ sub add_trans{
 	if(defined($model->{$from_state})){
 	    my $trans_func = $model->{$from_state};
 	    if(defined($trans_func->{$input})){
-		warn "$input of $from_state : Already exist\n";
+		warn "$input : $from_state : Already exists\n";
 		return 0;
 	    }else{
-		$trans_func->{$input} = $to_state;
+		$trans_func->{$input} = {
+		    to_state => $to_state,
+		    operation => $push_or_pop
+		};
 		$model->{$from_state} = $trans_func;
 		return 1;
 	    }
@@ -121,6 +137,14 @@ sub add_trans_to_final{
     my $self = shift;
     my $from_state = shift;
     my $input = shift;
+    my $push_or_pop = shift;
+    unless(defined($push_or_pop)){
+	$push_or_pop = 'push';
+    }
+    if(($push_or_pop ne 'push') and ($push_or_pop ne 'pop') and ($push_or_pop ne 'no')){
+	$push_or_pop = 'no';
+    }
+
     my $to_state = $self->final_state;
     my $model = $self->model;
     if($from_state eq $self->final_state){
@@ -133,7 +157,10 @@ sub add_trans_to_final{
 		warn "$input of $from_state : Already exist\n";
 		return 0;
 	    }else{
-		$trans_func->{$input} = $to_state;
+		$trans_func->{$input} = {
+		    to_state => $to_state,
+		    operation => $push_or_pop
+		};
 		$model->{$from_state} = $trans_func;
 		return 1;
 	    }
@@ -146,8 +173,16 @@ sub add_trans_to_final{
 
 sub add_trans_from_init{
     my $self = shift;
-    my $input = shift;
     my $to_state = shift;
+    my $input = shift;
+    my $push_or_pop = shift;
+    unless(defined($push_or_pop)){
+	$push_or_pop = 'push';
+    }
+    if(($push_or_pop ne 'push') and ($push_or_pop ne 'pop') and ($push_or_pop ne 'no')){
+	$push_or_pop = 'no';
+    }
+
     my $from_state = $self->init_state;
     my $model = $self->model;
     if($to_state eq $self->init_state){
@@ -160,7 +195,10 @@ sub add_trans_from_init{
 		warn "$input of ".$self->init_state." : Already exist\n";
 		return 0;
 	    }else{
-		$trans_func->{$input} = $to_state;
+		$trans_func->{$input} = {
+		    to_state => $to_state,
+		    operation => $push_or_pop
+		};
 		$model->{$self->init_state} = $trans_func;
 		return 1;
 	    }
@@ -171,7 +209,7 @@ sub add_trans_from_init{
     }
 }
 
-sub reset_stack{
+sub reset_state{
     my $self = shift;
     $self->stack_s([]);
     $self->stack_a([]);
@@ -203,7 +241,7 @@ sub transit{
     my $input = shift;
     my $attr = shift;
     my $model = $self->model;
-
+    my $acceptables = $self->acceptables;
     my $stack_s = $self->stack_s;
     my $stack_a = $self->stack_a;
     my $stack_b = $self->stack_b;
@@ -211,16 +249,24 @@ sub transit{
     my $current_state = $self->init_state;
     if(defined($stack_s->[$#$stack_s])){
 	$current_state = $stack_s->[$#$stack_s];
+    }else{
+	$stack_s = [$self->stack_init];
+	$self->stack_s($stack_s);
     }
-
+    print "Current STATE : $current_state\n";
     my $trans = $model->{$current_state};
     if(defined($trans->{$input})){
-	my $next_state = $trans->{$input};
-	if(defined(${$self->acceptables}->{$next_state})){
+	my $next_state = $trans->{$input}->{to_state};
+	print "Next STATE : $next_state\n";
+	if(defined($acceptables->{$next_state})){
 	    $self->acceptable(1);
 	}
 	if($next_state eq $self->final_state){
-	    push(@$stack_s,$next_state);
+	    if($trans->{$input}->{operation} eq 'push'){
+		push(@$stack_s,$next_state);
+	    }elsif($trans->{$input}->{operation} eq 'pop'){
+		pop(@$stack_s);
+	    }
 	    push(@$stack_a,$input);
 	    push(@$stack_b,$attr);
 	    $self->reset_state();
@@ -231,13 +277,29 @@ sub transit{
 		stack_b => $stack_b
 		    });
 	}else{
-	    push(@$stack_s,$next_state);
-	    push(@$stack_a,$input);
-	    push(@$stack_b,$attr);
-	    $self->stack_s($stack_s);
-	    $self->stack_a($stack_a);
-	    $self->stack_b($stack_b);
-	    return;
+	    if($trans->{$input}->{operation} eq 'push'){
+		push(@$stack_s,$next_state);
+	    }elsif($trans->{$input}->{operation} eq 'pop'){
+		pop(@$stack_s);
+	    }
+	    if($stack_s->[$#$stack_s] eq $self->stack_init){
+		push(@$stack_a,$input);
+		push(@$stack_b,$attr);
+		$self->reset_state();
+		return ({
+		    state => $next_state,
+		    stack_s => $stack_s,
+		    stack_a => $stack_a,
+		    stack_b => $stack_b
+			});
+	    }else{
+		push(@$stack_a,$input);
+		push(@$stack_b,$attr);
+		$self->stack_s($stack_s);
+		$self->stack_a($stack_a);
+		$self->stack_b($stack_b);
+		return;
+	    }
 	}
     }else{
 	if($self->acceptable == 1){
@@ -266,7 +328,7 @@ sub delete_dead_state{
     foreach my $key (sort keys %$model){
 	my $state = $model->{$key};
 	foreach my $input (sort keys %$state){
-	    $refered->{$state->{$input}} = 1;
+	    $refered->{$state->{$input}->{to_state}} = 1;
 	}
     }
     foreach my $key (sort keys %$model){
@@ -296,6 +358,11 @@ PDA::Simple - Push Down Automaton Simple
 =head1 SYNOPSIS
 
     use PDA::Simple;
+
+    # create PDA::Simple object.
+    my $pda = PDA::Simple->new();
+
+    # set
 
 =head1 DESCRIPTION
 
