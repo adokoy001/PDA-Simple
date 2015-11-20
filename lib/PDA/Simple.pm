@@ -4,6 +4,7 @@ use Mouse;
 
 our $VERSION = "0.01";
 
+# stack: memory
 has 'stack_init' => (
     is => 'rw',
     isa => 'Str',
@@ -15,21 +16,25 @@ has 'init_state' => (
     isa => 'Str',
     default => '__INIT__'
     );
+
 has 'final_state' => (
     is => 'rw',
     isa => 'Str',
     default => '__FINAL__'
     );
+
 has 'acceptable_state' => (
     is => 'rw',
     isa => 'Str',
     default => '__ACCEPTABLE__'
     );
+
 has 'acceptable' => (
     is => 'rw',
     isa => 'Num',
     default => 0
     );
+
 has 'stack_s' => (
     is => 'rw',
     isa => 'ArrayRef[Str]',
@@ -65,8 +70,7 @@ has 'acceptables' => (
     default => sub {{}}
     );
 
-
-
+# define reachable state.
 sub add_state{
     my $self = shift;
     my $state_name = shift;
@@ -79,6 +83,7 @@ sub add_state{
     }
 }
 
+# add acceptable states
 sub add_acceptables{
     my $self = shift;
     my $state = shift;
@@ -92,7 +97,7 @@ sub add_acceptables{
     }
 }
 
-
+# add transition path
 sub add_trans{
     my $self = shift;
     my $from_state = shift;
@@ -133,6 +138,7 @@ sub add_trans{
     }
 }
 
+# add transition path to final
 sub add_trans_to_final{
     my $self = shift;
     my $from_state = shift;
@@ -171,6 +177,7 @@ sub add_trans_to_final{
     }
 }
 
+# add transition from init
 sub add_trans_from_init{
     my $self = shift;
     my $to_state = shift;
@@ -209,6 +216,7 @@ sub add_trans_from_init{
     }
 }
 
+# clear stack and states.
 sub reset_state{
     my $self = shift;
     $self->stack_s([]);
@@ -218,11 +226,13 @@ sub reset_state{
     return 1;
 }
 
+# export model
 sub export_model{
     my $self = shift;
     return($self->model);
 }
 
+# import model
 sub import_model{
     my $self = shift;
     my $model = shift;
@@ -236,6 +246,7 @@ sub import_model{
     }
 }
 
+# transit by input and attribute.
 sub transit{
     my $self = shift;
     my $input = shift;
@@ -320,6 +331,7 @@ sub transit{
     }
 }
 
+# delete unreachable states
 sub delete_dead_state{
     my $self = shift;
     my $model = $self->model;
